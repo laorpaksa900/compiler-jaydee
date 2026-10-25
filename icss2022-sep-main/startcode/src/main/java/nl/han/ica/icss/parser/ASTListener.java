@@ -36,17 +36,20 @@ public class ASTListener extends ICSSBaseListener {
 	@Override
 	public void enterStylerule(ICSSParser.StyleruleContext ctx) {
 		Stylerule stylerule = new Stylerule();
+		// Voeg de stijlregel toe en zet deze op de stack.
 		ast.root.addChild(stylerule);
 		currentContainer.push(stylerule);
 	}
 
 	@Override
 	public void exitStylerule(ICSSParser.StyleruleContext ctx) {
+		// Verwijder de stijlregel van de stack.
 		currentContainer.pop();
 	}
 
 	@Override
 	public void enterSelector(ICSSParser.SelectorContext ctx) {
+		// Bepaal welk type selector ANTLR heeft herkend
 		if (ctx.LOWER_IDENT() != null) {
 			TagSelector selector = new TagSelector(ctx.LOWER_IDENT().getText());
 			currentContainer.peek().addChild(selector);
@@ -63,11 +66,15 @@ public class ASTListener extends ICSSBaseListener {
 
 	@Override
 	public void enterDeclaration(ICSSParser.DeclarationContext ctx) {
+		// Maak een declaratie aan met de herkende property.
 		Declaration declaration = new Declaration(ctx.property().getText());
+		// Voeg de declaratie toe aan de huidige stijlregel.
 		currentContainer.peek().addChild(declaration);
+		// Zet de declaratie op de stack om straks de waarde toe te voegen.
 		currentContainer.push(declaration);
 	}
 	 public void exitDeclaration(ICSSParser.DeclarationContext ctx) {
+		 // Ga terug naar de stijlregel na het verwerken van de declaratie.
 		currentContainer.pop();
 	 }
 
