@@ -68,6 +68,11 @@ public class ASTListener extends ICSSBaseListener {
 	public void enterDeclaration(ICSSParser.DeclarationContext ctx) {
 		// Maak een declaratie aan met de herkende property.
 		Declaration declaration = new Declaration(ctx.property().getText());
+		// Voeg een variabelereferentie toe als de declaratie een variabele gebruikt.
+		if (ctx.CAPITAL_IDENT() != null) {
+			VariableReference reference = new VariableReference(ctx.CAPITAL_IDENT().getText());
+			declaration.addChild(reference);
+		}
 		// Voeg de declaratie toe aan de huidige stijlregel.
 		currentContainer.peek().addChild(declaration);
 		// Zet de declaratie op de stack om straks de waarde toe te voegen.

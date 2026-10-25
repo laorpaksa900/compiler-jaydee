@@ -51,7 +51,7 @@ stylerule: selector OPEN_BRACE declaration* CLOSE_BRACE;
 
 selector: LOWER_IDENT | ID_IDENT | CLASS_IDENT;
 
-declaration: property COLON literal SEMICOLON;
+declaration:  property COLON (literal| CAPITAL_IDENT) SEMICOLON;
 
 property: 'color' | 'background-color' | 'width' | 'height';
 
