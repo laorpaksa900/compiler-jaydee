@@ -32,5 +32,43 @@ public class ASTListener extends ICSSBaseListener {
     public AST getAST() {
         return ast;
     }
-    
+
+	@Override
+	public void enterStylerule(ICSSParser.StyleruleContext ctx) {
+		Stylerule stylerule = new Stylerule();
+		ast.root.addChild(stylerule);
+		currentContainer.push(stylerule);
+	}
+
+	@Override
+	public void exitStylerule(ICSSParser.StyleruleContext ctx) {
+		currentContainer.pop();
+	}
+
+	@Override
+	public void enterSelector(ICSSParser.SelectorContext ctx) {
+		if (ctx.LOWER_IDENT() != null) {
+			TagSelector selector = new TagSelector(ctx.LOWER_IDENT().getText());
+			currentContainer.peek().addChild(selector);
+
+		} else if (ctx.ID_IDENT() != null) {
+			IdSelector selector = new IdSelector(ctx.ID_IDENT().getText());
+			currentContainer.peek().addChild(selector);
+
+		} else if (ctx.CLASS_IDENT() != null) {
+			ClassSelector selector = new ClassSelector(ctx.CLASS_IDENT().getText());
+			currentContainer.peek().addChild(selector);
+		}
+	}
+
+	@Override
+	public void enterDeclaration(ICSSParser.DeclarationContext ctx) {
+		Declaration declaration = new Declaration(ctx.property().getText());
+		currentContainer.peek().addChild(declaration);
+		currentContainer.push(declaration);
+	}
+	 public void exitDeclaration(ICSSParser.DeclarationContext ctx) {
+		currentContainer.pop();
+	 }
+
 }
