@@ -79,4 +79,21 @@ public class ASTListener extends ICSSBaseListener {
 		currentContainer.pop();
 	 }
 
+	 @Override
+	public void enterLiteral(ICSSParser.LiteralContext ctx) {
+		// Bepaal welk type literal ANTLR heeft herkend.
+		 if (ctx.PIXELSIZE() != null) {
+			 PixelLiteral literal = new PixelLiteral(ctx.PIXELSIZE().getText());
+			 currentContainer.peek().addChild(literal);
+		 }
+		 else if(ctx.PERCENTAGE() != null) {
+			 PercentageLiteral literal = new PercentageLiteral(ctx.PERCENTAGE().getText());
+			 currentContainer.peek().addChild(literal);
+		 }
+		 else if(ctx.COLOR() != null) {
+			 ColorLiteral literal = new ColorLiteral(ctx.COLOR().getText());
+			 currentContainer.peek().addChild(literal);
+		 }
+	 }
+
 }
