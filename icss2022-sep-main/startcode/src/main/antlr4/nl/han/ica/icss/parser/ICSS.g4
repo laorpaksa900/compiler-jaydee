@@ -55,6 +55,6 @@ declaration:  property COLON (literal| CAPITAL_IDENT) SEMICOLON;
 
 property: 'color' | 'background-color' | 'width' | 'height';
 
-literal: PIXELSIZE | PERCENTAGE | COLOR;
+literal: PIXELSIZE | PERCENTAGE | COLOR | TRUE | FALSE;
 
 assignment: CAPITAL_IDENT ASSIGNMENT_OPERATOR literal SEMICOLON;
