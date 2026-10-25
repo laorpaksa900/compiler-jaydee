@@ -73,6 +73,7 @@ public class ASTListener extends ICSSBaseListener {
 		// Zet de declaratie op de stack om straks de waarde toe te voegen.
 		currentContainer.push(declaration);
 	}
+	@Override
 	 public void exitDeclaration(ICSSParser.DeclarationContext ctx) {
 		 // Ga terug naar de stijlregel na het verwerken van de declaratie.
 		currentContainer.pop();
