@@ -1,5 +1,7 @@
 package nl.han.ica.icss.parser;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Stack;
 
 
@@ -13,6 +15,8 @@ import nl.han.ica.icss.ast.operations.SubtractOperation;
 import nl.han.ica.icss.ast.selectors.ClassSelector;
 import nl.han.ica.icss.ast.selectors.IdSelector;
 import nl.han.ica.icss.ast.selectors.TagSelector;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 /**
  * This class extracts the ICSS Abstract Syntax Tree from the Antlr Parse tree.
@@ -24,6 +28,8 @@ public class ASTListener extends ICSSBaseListener {
 
 	//Use this to keep track of the parent nodes when recursively traversing the ast
 	private IHANStack<ASTNode> currentContainer;
+
+	private final Map<ParserRuleContext, Expression> expressions = new IdentityHashMap<>();
 
 	public ASTListener() {
 		ast = new AST();
@@ -68,19 +74,19 @@ public class ASTListener extends ICSSBaseListener {
 	public void enterDeclaration(ICSSParser.DeclarationContext ctx) {
 		// Maak een declaratie aan met de herkende property.
 		Declaration declaration = new Declaration(ctx.property().getText());
-		// Voeg een variabelereferentie toe als de declaratie een variabele gebruikt.
-		if (ctx.CAPITAL_IDENT() != null) {
-			VariableReference reference = new VariableReference(ctx.CAPITAL_IDENT().getText());
-			declaration.addChild(reference);
-		}
+
 		// Voeg de declaratie toe aan de huidige stijlregel.
 		currentContainer.peek().addChild(declaration);
-		// Zet de declaratie op de stack om straks de waarde toe te voegen.
+
+		// Zet de declaratie op de stack.
 		currentContainer.push(declaration);
 	}
 	@Override
 	 public void exitDeclaration(ICSSParser.DeclarationContext ctx) {
-		 // Ga terug naar de stijlregel na het verwerken van de declaratie.
+		// Voeg de volledige berekening toe aan de declaratie.
+		currentContainer.peek().addChild(expressions.get(ctx.expression()));
+
+		// Verlaat de huidige declaratie.
 		currentContainer.pop();
 	 }
 
@@ -89,23 +95,27 @@ public class ASTListener extends ICSSBaseListener {
 		// Bepaal welk type literal ANTLR heeft herkend.
 		 if (ctx.PIXELSIZE() != null) {
 			 PixelLiteral literal = new PixelLiteral(ctx.PIXELSIZE().getText());
-			 currentContainer.peek().addChild(literal);
+			 expressions.put(ctx, literal);
 		 }
 		 else if(ctx.PERCENTAGE() != null) {
 			 PercentageLiteral literal = new PercentageLiteral(ctx.PERCENTAGE().getText());
-			 currentContainer.peek().addChild(literal);
+			 expressions.put(ctx, literal);
 		 }
 		 else if(ctx.COLOR() != null) {
 			 ColorLiteral literal = new ColorLiteral(ctx.COLOR().getText());
-			 currentContainer.peek().addChild(literal);
+			 expressions.put(ctx, literal);
 		 }
 		 else if(ctx.TRUE() != null) {
 			 BoolLiteral literal = new BoolLiteral(ctx.TRUE().getText());
-			 currentContainer.peek().addChild(literal);
+			 expressions.put(ctx, literal);
 		 }
 		 else if(ctx.FALSE() != null) {
 			 BoolLiteral literal = new BoolLiteral(ctx.FALSE().getText());
-			 currentContainer.peek().addChild(literal);
+			 expressions.put(ctx, literal);
+		 }
+		 else if (ctx.SCALAR() != null) {
+			 ScalarLiteral literal = new ScalarLiteral(ctx.SCALAR().getText());
+			 expressions.put(ctx, literal);
 		 }
 	 }
 
@@ -120,8 +130,75 @@ public class ASTListener extends ICSSBaseListener {
 		ast.root.addChild(assignment);
 		currentContainer.push(assignment);
 	}
+
 	@Override
 	public void exitAssignment(ICSSParser.AssignmentContext ctx) {
+		// Voeg de volledige berekening toe aan de assignment.
+		currentContainer.peek().addChild(expressions.get(ctx.expression()));
+
+		// Verlaat de assignment.
 		currentContainer.pop();
+	}
+
+	@Override
+	public void exitTerm(ICSSParser.TermContext ctx) {
+		Expression result;
+
+		if (ctx.getChild(0) instanceof ICSSParser.LiteralContext) {
+			// Haal de eerste literal op uit de Map.
+			result = expressions.get(ctx.literal(0));
+		} else {
+			// Maak een referentie als de term begint met een variabele.
+			result = new VariableReference(ctx.getChild(0).getText());
+		}
+
+		// Verwerk alle vermenigvuldigingen.
+		for (int i = 0; i < ctx.MUL().size(); i++) {
+			ParseTree child = ctx.getChild(2 * i + 2);
+			Expression right;
+
+			if (child instanceof ICSSParser.LiteralContext) {
+				right = expressions.get(child);
+			} else {
+				right = new VariableReference(child.getText());
+			}
+
+			// Maak een vermenigvuldiging met de linker- en rechterwaarde.
+			MultiplyOperation operation = new MultiplyOperation();
+			operation.addChild(result);
+			operation.addChild(right);
+
+			// Bewaar de nieuwe operation als tussenresultaat.
+			result = operation;
+		}
+
+		// Bewaar het volledige resultaat van de term.
+		expressions.put(ctx, result);
+	}
+	@Override
+	public void exitExpression(ICSSParser.ExpressionContext ctx) {
+		// Haal het resultaat van de eerste term op.
+		Expression result = expressions.get(ctx.term(0));
+
+		// Verwerk alle optellingen en aftrekkingen.
+		for (int i = 1; i < ctx.term().size(); i++) {
+			Expression right = expressions.get(ctx.term(i));
+			String operator = ctx.getChild(2 * i - 1).getText();
+
+			if (operator.equals("+")) {
+				AddOperation operation = new AddOperation();
+				operation.addChild(result);
+				operation.addChild(right);
+				result = operation;
+			} else if (operator.equals("-")) {
+				SubtractOperation operation = new SubtractOperation();
+				operation.addChild(result);
+				operation.addChild(right);
+				result = operation;
+			}
+		}
+
+		// Bewaar het volledige resultaat van de expression.
+		expressions.put(ctx, result);
 	}
 }

@@ -51,10 +51,16 @@ stylerule: selector OPEN_BRACE declaration* CLOSE_BRACE;
 
 selector: LOWER_IDENT | ID_IDENT | CLASS_IDENT;
 
-declaration:  property COLON (literal| CAPITAL_IDENT) SEMICOLON;
+declaration:  property COLON expression SEMICOLON;
 
 property: 'color' | 'background-color' | 'width' | 'height';
 
-literal: PIXELSIZE | PERCENTAGE | COLOR | TRUE | FALSE;
+literal: SCALAR | PIXELSIZE | PERCENTAGE | COLOR | TRUE | FALSE;
 
-assignment: CAPITAL_IDENT ASSIGNMENT_OPERATOR literal SEMICOLON;
+assignment: CAPITAL_IDENT ASSIGNMENT_OPERATOR expression SEMICOLON;
+
+operation: (CAPITAL_IDENT | literal) (PLUS | MIN | MUL) literal;
+
+expression: term ((PLUS | MIN) term)*;
+
+term: (CAPITAL_IDENT | literal) (MUL (literal | CAPITAL_IDENT))*;
